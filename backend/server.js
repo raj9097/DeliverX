@@ -1,76 +1,168 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+
+// Import Mongoose Models
+const Shipment = require('./models/Shipment');
+const Driver = require('./models/Driver');
+const Notification = require('./models/Notification');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-let SHIPMENTS = [
-    { id: 'SHP-001', tracking: 'DX-7842-KL', origin: 'New York, NY', destination: 'Los Angeles, CA', status: 'transit', weight: '12.4 kg', customer: 'Acme Corp', driver: 'Taylor Quinn', eta: '2025-02-20', priority: 'high', created: '2025-02-15' },
-    { id: 'SHP-002', tracking: 'DX-7843-MN', origin: 'Chicago, IL', destination: 'Houston, TX', status: 'delivered', weight: '3.2 kg', customer: 'TechFlow Inc', driver: 'Casey Park', eta: '2025-02-17', priority: 'medium', created: '2025-02-14' },
-    { id: 'SHP-003', tracking: 'DX-7844-PQ', origin: 'Seattle, WA', destination: 'Miami, FL', status: 'pending', weight: '28.1 kg', customer: 'Global Retail', driver: 'Unassigned', eta: '2025-02-22', priority: 'low', created: '2025-02-16' },
-    { id: 'SHP-004', tracking: 'DX-7845-RS', origin: 'Boston, MA', destination: 'Denver, CO', status: 'processing', weight: '5.7 kg', customer: 'Swift Goods', driver: 'Taylor Quinn', eta: '2025-02-21', priority: 'high', created: '2025-02-16' },
-    { id: 'SHP-005', tracking: 'DX-7846-TU', origin: 'Phoenix, AZ', destination: 'Portland, OR', status: 'failed', weight: '9.3 kg', customer: 'BestBuy Pro', driver: 'Casey Park', eta: '2025-02-18', priority: 'medium', created: '2025-02-13' },
-    { id: 'SHP-006', tracking: 'DX-7847-VW', origin: 'Atlanta, GA', destination: 'Las Vegas, NV', status: 'transit', weight: '15.6 kg', customer: 'FastShip LLC', driver: 'Taylor Quinn', eta: '2025-02-19', priority: 'high', created: '2025-02-15' },
-    { id: 'SHP-007', tracking: 'DX-7848-XY', origin: 'Dallas, TX', destination: 'San Diego, CA', status: 'delivered', weight: '2.1 kg', customer: 'NovaMart', driver: 'Casey Park', eta: '2025-02-17', priority: 'low', created: '2025-02-14' },
-    { id: 'SHP-008', tracking: 'DX-7849-ZA', origin: 'Minneapolis, MN', destination: 'Nashville, TN', status: 'pending', weight: '6.8 kg', customer: 'PrimeShip Co', driver: 'Unassigned', eta: '2025-02-23', priority: 'medium', created: '2025-02-16' },
-];
+// MongoDB Connection
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/DeliverX';
 
-let DRIVERS = [
-    { id: 1, name: 'Taylor Quinn', vehicle: 'Ford Transit – TX-847', status: 'on_route', deliveries: 12, rating: 4.8, phone: '+1 555-0101', zone: 'Route 7 – North', todayTrips: 3 },
-    { id: 2, name: 'Casey Park', vehicle: 'Mercedes Sprinter – CA-293', status: 'available', deliveries: 8, rating: 4.6, phone: '+1 555-0102', zone: 'Last Mile – Zone 3', todayTrips: 2 },
-    { id: 3, name: 'Jamie Lee', vehicle: 'Ram ProMaster – NY-512', status: 'break', deliveries: 15, rating: 4.9, phone: '+1 555-0103', zone: 'Route 2 – East', todayTrips: 4 },
-    { id: 4, name: 'Robin Cruz', vehicle: 'Chevy Express – IL-774', status: 'on_route', deliveries: 6, rating: 4.5, phone: '+1 555-0104', zone: 'Route 5 – West', todayTrips: 2 },
-];
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('✅ MongoDB connected successfully'))
+  .catch((err) => console.error('❌ MongoDB connection error:', err));
 
-let MONTHLY_STATS = [
-    { month: 'Aug', shipments: 420, delivered: 390, failed: 30 },
-    { month: 'Sep', shipments: 380, delivered: 355, failed: 25 },
-    { month: 'Oct', shipments: 510, delivered: 480, failed: 30 },
-    { month: 'Nov', shipments: 470, delivered: 440, failed: 30 },
-    { month: 'Dec', shipments: 620, delivered: 580, failed: 40 },
-    { month: 'Jan', shipments: 540, delivered: 510, failed: 30 },
-    { month: 'Feb', shipments: 310, delivered: 290, failed: 20 },
-];
+// API Routes - Now using MongoDB
 
-let REVENUE_DATA = [
-    { month: 'Aug', revenue: 42000 },
-    { month: 'Sep', revenue: 38500 },
-    { month: 'Oct', revenue: 51000 },
-    { month: 'Nov', revenue: 47200 },
-    { month: 'Dec', revenue: 62000 },
-    { month: 'Jan', revenue: 54100 },
-    { month: 'Feb', revenue: 31400 },
-];
-
-let NOTIFICATIONS = [
-    { id: 1, type: 'alert', message: 'SHP-005 delivery failed – customer not available', time: '2m ago' },
-    { id: 2, type: 'success', message: 'SHP-002 successfully delivered to TechFlow Inc', time: '18m ago' },
-    { id: 3, type: 'info', message: 'Driver Taylor Quinn started route 7', time: '45m ago' },
-    { id: 4, type: 'warning', message: 'SHP-003 pending assignment for 2 hours', time: '1h ago' },
-    { id: 5, type: 'info', message: 'New shipment SHP-008 registered by Jordan Smith', time: '2h ago' },
-];
-
-app.get('/api/shipments', (req, res) => res.json(SHIPMENTS));
-app.get('/api/drivers', (req, res) => res.json(DRIVERS));
-app.get('/api/stats/monthly', (req, res) => res.json(MONTHLY_STATS));
-app.get('/api/stats/revenue', (req, res) => res.json(REVENUE_DATA));
-app.get('/api/notifications', (req, res) => res.json(NOTIFICATIONS));
-
-// Update driver status
-app.patch('/api/drivers/:id/status', (req, res) => {
-    const driverId = parseInt(req.params.id);
-    const { status } = req.body;
-    const driver = DRIVERS.find(d => d.id === driverId);
-    if (driver) {
-        driver.status = status;
-        res.json(driver);
-    } else {
-        res.status(404).json({ error: 'Driver not found' });
+// Get all shipments
+app.get('/api/shipments', async (req, res) => {
+    try {
+        const shipments = await Shipment.find().sort({ created: -1 });
+        res.json(shipments);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
-const PORT = 5000;
+// Create new shipment
+app.post('/api/shipments', async (req, res) => {
+    try {
+        const shipment = new Shipment(req.body);
+        await shipment.save();
+        res.status(201).json(shipment);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Update shipment
+app.put('/api/shipments/:id', async (req, res) => {
+    try {
+        const shipment = await Shipment.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (shipment) {
+            res.json(shipment);
+        } else {
+            res.status(404).json({ error: 'Shipment not found' });
+        }
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Delete shipment
+app.delete('/api/shipments/:id', async (req, res) => {
+    try {
+        const shipment = await Shipment.findByIdAndDelete(req.params.id);
+        if (shipment) {
+            res.json({ message: 'Shipment deleted successfully' });
+        } else {
+            res.status(404).json({ error: 'Shipment not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get all drivers
+app.get('/api/drivers', async (req, res) => {
+    try {
+        const drivers = await Driver.find();
+        res.json(drivers);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get monthly stats (mock calculation from shipments)
+app.get('/api/stats/monthly', async (req, res) => {
+    try {
+        const shipments = await Shipment.find();
+        // Group by month from created date
+        const stats = {};
+        shipments.forEach(s => {
+            const month = new Date(s.created).toLocaleString('default', { month: 'short' });
+            if (!stats[month]) {
+                stats[month] = { shipments: 0, delivered: 0, failed: 0 };
+            }
+            stats[month].shipments++;
+            if (s.status === 'delivered') stats[month].delivered++;
+            if (s.status === 'failed') stats[month].failed++;
+        });
+        res.json(Object.entries(stats).map(([month, data]) => ({ month, ...data })));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get revenue data (mock - would need price field)
+app.get('/api/stats/revenue', async (req, res) => {
+    try {
+        const shipments = await Shipment.find();
+        const revenueByMonth = {};
+        shipments.forEach(s => {
+            const month = new Date(s.created).toLocaleString('default', { month: 'short' });
+            if (!revenueByMonth[month]) {
+                revenueByMonth[month] = 0;
+            }
+            // Mock revenue calculation - would need actual price field
+            revenueByMonth[month] += 100; 
+        });
+        res.json(Object.entries(revenueByMonth).map(([month, revenue]) => ({ month, revenue })));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get notifications
+app.get('/api/notifications', async (req, res) => {
+    try {
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update driver status
+app.patch('/api/drivers/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const driver = await Driver.findByIdAndUpdate(
+            id,
+            { status },
+            { new: true }
+        );
+        if (driver) {
+            res.json(driver);
+        } else {
+            res.status(404).json({ error: 'Driver not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.json({ 
+        status: 'ok', 
+        database: dbStatus,
+        timestamp: new Date().toISOString()
+    });
+});
+
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
