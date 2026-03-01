@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Search, Filter, Plus, Eye, Edit2, Trash2, Package } from 'lucide-react';
-import { SHIPMENTS } from '../../utils/mockData';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, Plus, Eye, Edit2, Trash2, Package, X } from 'lucide-react';
+
+const API_BASE = 'http://localhost:5000/api';
 
 const StatusBadge = ({ status }) => {
   const cls = {
@@ -34,22 +35,129 @@ const PriorityBadge = ({ priority }) => {
   );
 };
 
-export default function ShipmentsTable({ canCreate = false, canEdit = false, canDelete = false, filterByDriver = null }) {
+export default function ShipmentsTable({ canCreate = false, canEdit = false, canDelete = false, filterByDriver = null, onShipmentsUpdate }) {
+  const [shipments, setShipments] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    customer: '',
+    origin: '',
+    destination: '',
+    weight: '',
+    eta: '',
+    priority: 'medium'
+  });
 
-  let data = SHIPMENTS;
+  // Fetch shipments from API
+  const fetchShipments = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/shipments`);
+      const data = await res.json();
+      setShipments(data);
+      if (onShipmentsUpdate) {
+        onShipmentsUpdate(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch shipments:', err);
+      setError('Failed to load shipments');
+    }
+  };
+
+  useEffect(() => {
+    fetchShipments();
+  }, []);
+
+  // Filter data
+  let data = shipments;
   if (filterByDriver) data = data.filter(s => s.driver === filterByDriver);
   if (search) data = data.filter(s =>
-    s.tracking.toLowerCase().includes(search.toLowerCase()) ||
-    s.customer.toLowerCase().includes(search.toLowerCase()) ||
-    s.destination.toLowerCase().includes(search.toLowerCase())
+    (s.tracking?.toLowerCase().includes(search.toLowerCase()) ||
+    s.customer?.toLowerCase().includes(search.toLowerCase()) ||
+    s.destination?.toLowerCase().includes(search.toLowerCase()))
   );
   if (statusFilter !== 'all') data = data.filter(s => s.status === statusFilter);
 
+  // Handle form input change
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`${API_BASE}/shipments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to create shipment');
+      }
+
+      const newShipment = await res.json();
+      
+      // Refresh the list
+      await fetchShipments();
+      
+      // Reset form and close modal
+      setFormData({
+        customer: '',
+        origin: '',
+        destination: '',
+        weight: '',
+        eta: '',
+        priority: 'medium'
+      });
+      setShowModal(false);
+    } catch (err) {
+      console.error('Failed to create shipment:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle delete
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this shipment?')) return;
+    
+    try {
+      const res = await fetch(`${API_BASE}/shipments/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (res.ok) {
+        await fetchShipments();
+      }
+    } catch (err) {
+      console.error('Failed to delete shipment:', err);
+      setError('Failed to delete shipment');
+    }
+  };
+
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* Error Message */}
+      {error && (
+        <div className="p-3 bg-red-500/10 border-b border-red-500/20 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-3 flex-wrap">
@@ -105,7 +213,7 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
                 </td>
               </tr>
             ) : data.map(s => (
-              <tr key={s.id} className="table-row">
+              <tr key={s._id || s.id} className="table-row">
                 <td className="px-4 py-3 font-mono text-xs font-semibold" style={{ color: 'var(--accent)' }}>{s.tracking}</td>
                 <td className="px-4 py-3 font-medium text-sm">{s.customer}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-secondary)', maxWidth: 200 }}>
@@ -121,7 +229,7 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
                   <div className="flex items-center gap-1">
                     <button className="p-1.5 rounded-lg transition-colors hover:bg-zinc-700" title="View"><Eye size={13} /></button>
                     {canEdit && <button className="p-1.5 rounded-lg transition-colors hover:bg-zinc-700" title="Edit"><Edit2 size={13} /></button>}
-                    {canDelete && <button className="p-1.5 rounded-lg transition-colors hover:text-red-400" title="Delete"><Trash2 size={13} /></button>}
+                    {canDelete && <button onClick={() => handleDelete(s._id)} className="p-1.5 rounded-lg transition-colors hover:text-red-400" title="Delete"><Trash2 size={13} /></button>}
                   </div>
                 </td>
               </tr>
@@ -132,7 +240,7 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
 
       {/* Footer */}
       <div className="px-4 py-3 border-t flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Showing {data.length} of {SHIPMENTS.length} shipments</span>
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Showing {data.length} of {shipments.length} shipments</span>
         <div className="flex gap-1">
           <button className="btn-ghost px-3 py-1 text-xs">Prev</button>
           <button className="btn-primary px-3 py-1 text-xs">1</button>
@@ -144,31 +252,105 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
           <div className="card w-full max-w-lg animate-fade-in" style={{ padding: 28 }}>
-            <h2 className="font-heading text-xl font-bold mb-5">Register New Shipment</h2>
-            <div className="space-y-3">
-              {[
-                ['Customer Name', 'text', 'Acme Corp'],
-                ['Origin Address', 'text', 'New York, NY'],
-                ['Destination Address', 'text', 'Los Angeles, CA'],
-                ['Package Weight (kg)', 'number', '5.0'],
-                ['ETA', 'date', ''],
-              ].map(([label, type, ph]) => (
-                <div key={label}>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>{label}</label>
-                  <input type={type} placeholder={ph} className="input-field" />
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-heading text-xl font-bold">Register New Shipment</h2>
+              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-zinc-700 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Customer Name *</label>
+                  <input 
+                    type="text" 
+                    name="customer"
+                    value={formData.customer}
+                    onChange={handleInputChange}
+                    placeholder="Acme Corp" 
+                    className="input-field" 
+                    required
+                  />
                 </div>
-              ))}
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Priority</label>
-                <select className="input-field">
-                  <option>high</option><option>medium</option><option>low</option>
-                </select>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Origin Address *</label>
+                  <input 
+                    type="text" 
+                    name="origin"
+                    value={formData.origin}
+                    onChange={handleInputChange}
+                    placeholder="New York, NY" 
+                    className="input-field" 
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Destination Address *</label>
+                  <input 
+                    type="text" 
+                    name="destination"
+                    value={formData.destination}
+                    onChange={handleInputChange}
+                    placeholder="Los Angeles, CA" 
+                    className="input-field" 
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Weight (kg)</label>
+                    <input 
+                      type="number" 
+                      name="weight"
+                      value={formData.weight}
+                      onChange={handleInputChange}
+                      placeholder="5.0" 
+                      step="0.1"
+                      className="input-field" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>ETA</label>
+                    <input 
+                      type="date" 
+                      name="eta"
+                      value={formData.eta}
+                      onChange={handleInputChange}
+                      className="input-field" 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Priority</label>
+                  <select 
+                    name="priority"
+                    value={formData.priority}
+                    onChange={handleInputChange}
+                    className="input-field"
+                  >
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
               </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button className="btn-primary flex-1" onClick={() => setShowModal(false)}>Register Shipment</button>
-              <button className="btn-ghost flex-1" onClick={() => setShowModal(false)}>Cancel</button>
-            </div>
+              <div className="flex gap-3 mt-6">
+                <button 
+                  type="submit" 
+                  className="btn-primary flex-1" 
+                  disabled={loading}
+                >
+                  {loading ? 'Creating...' : 'Register Shipment'}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-ghost flex-1" 
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

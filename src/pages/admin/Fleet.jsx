@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Truck, Star, Phone, MapPin, Package } from 'lucide-react';
-import { DRIVERS } from '../../utils/mockData';
+
+const API_BASE = 'http://localhost:5000/api';
 
 const statusStyle = {
   on_route:  { bg: 'rgba(249,115,22,0.1)', color: '#f97316', label: '▶ On Route' },
@@ -9,13 +10,43 @@ const statusStyle = {
 };
 
 export default function Fleet() {
+  const [drivers, setDrivers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDrivers = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/drivers`);
+        const data = await res.json();
+        setDrivers(data);
+      } catch (err) {
+        console.error('Failed to fetch drivers:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDrivers();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  const totalDrivers = drivers.length;
+  const onRouteCount = drivers.filter(d => d.status === 'on_route').length;
+  const availableCount = drivers.filter(d => d.status === 'available').length;
+
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Total Drivers', value: DRIVERS.length, color: '#f97316' },
-          { label: 'On Route',      value: DRIVERS.filter(d => d.status === 'on_route').length, color: '#3b82f6' },
-          { label: 'Available',     value: DRIVERS.filter(d => d.status === 'available').length, color: '#22c55e' },
+          { label: 'Total Drivers', value: totalDrivers, color: '#f97316' },
+          { label: 'On Route',      value: onRouteCount, color: '#3b82f6' },
+          { label: 'Available',     value: availableCount, color: '#22c55e' },
         ].map(s => (
           <div key={s.label} className="card text-center">
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }}>{s.label}</p>
@@ -25,11 +56,11 @@ export default function Fleet() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {DRIVERS.map(d => {
-          const ss = statusStyle[d.status];
-          const initials = d.name.split(' ').map(n => n[0]).join('');
+        {drivers.map(d => {
+          const ss = statusStyle[d.status] || statusStyle.available;
+          const initials = d.name ? d.name.split(' ').map(n => n[0]).join('') : 'D';
           return (
-            <div key={d.id} className="card animate-fade-in">
+            <div key={d._id || d.id} className="card animate-fade-in">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-base"
@@ -41,7 +72,7 @@ export default function Fleet() {
                     <div className="flex items-center gap-1 mt-0.5">
                       <Star size={12} className="text-yellow-400 fill-yellow-400" />
                       <span className="text-xs font-semibold" style={{ color: '#eab308' }}>{d.rating}</span>
-                      <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>({d.deliveries} trips)</span>
+                      <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>({d.deliveries || 0} trips)</span>
                     </div>
                   </div>
                 </div>
@@ -63,7 +94,7 @@ export default function Fleet() {
                 </div>
                 <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
                   <Package size={13} style={{ color: 'var(--text-muted)' }} />
-                  <span>{d.todayTrips} trips today</span>
+                  <span>{d.todayTrips || 0} trips today</span>
                 </div>
               </div>
 
