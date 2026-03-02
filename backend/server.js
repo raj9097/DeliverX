@@ -248,7 +248,210 @@ app.get('/api/stats/summary', async (req, res) => {
     }
 });
 
+// ============================================
+// USER MANAGEMENT ROUTES
+// ============================================
+
+// Import User model
+const User = require('./models/User');
+
+// Get all users
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await User.find().select('-password').sort({ createdAt: -1 });
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get single user
+app.get('/api/users/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('-password');
+        if (user) {
+            res.json(user);
+        } else {
+            res.status(404).json({ error: 'User not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create new user
+app.post('/api/users', async (req, res) => {
+    try {
+        const { name, email, password, role, department, status } = req.body;
+        
+        // Check if email already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Email already in use' });
+        }
+        
+        const user = new User({
+            name,
+            email,
+            password,
+            role: role || 'clerk',
+            department: department || '',
+            status: status || 'active'
+        });
+        
+        await user.save();
+        
+        // Return user without password
+        const userResponse = user.toObject();
+        delete userResponse.password;
+        
+        res.status(201).json(userResponse);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Update user
+app.put('/api/users/:id', async (req, res) => {
+    try {
+        const { name, email, role, department, status, password } = req.body;
+        
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Update fields
+        if (name) user.name = name;
+        if (email) user.email = email;
+        if (role) user.role = role;
+        if (department !== undefined) user.department = department;
+        if (status) user.status = status;
+        if (password) user.password = password;
+        
+        await user.save();
+        
+        const userResponse = user.toObject();
+        delete userResponse.password;
+        
+        res.json(userResponse);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Delete user
+app.delete('/api/users/:id', async (req, res) => {
+    try {
+        const user = await User.findByIdAndDelete(req.params.id);
+        if (user) {
+            res.json({ message: 'User deleted successfully' });
+        } else {
+            res.status(404).json({ error: 'User not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// User login
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Please provide email and password' });
+        }
+        
+        const user = await User.findOne({ email }).select('+password');
+        
+        if (!user || !(await user.comparePassword(password))) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        
+        if (user.status === 'inactive') {
+            return res.status(401).json({ error: 'Account is inactive' });
+        }
+        
+        const userResponse = user.toObject();
+        delete userResponse.password;
+        
+        res.json({
+            success: true,
+            user: userResponse
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
+// DRIVER MANAGEMENT ROUTES
+// ============================================
+
+// Create new driver
+app.post('/api/drivers', async (req, res) => {
+    try {
+        const driver = new Driver(req.body);
+        await driver.save();
+        res.status(201).json(driver);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Update driver
+app.put('/api/drivers/:id', async (req, res) => {
+    try {
+        const driver = await Driver.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (driver) {
+            res.json(driver);
+        } else {
+            res.status(404).json({ error: 'Driver not found' });
+        }
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Delete driver
+app.delete('/api/drivers/:id', async (req, res) => {
+    try {
+        const driver = await Driver.findByIdAndDelete(req.params.id);
+        if (driver) {
+            res.json({ message: 'Driver deleted successfully' });
+        } else {
+            res.status(404).json({ error: 'Driver not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
+// NOTIFICATION MANAGEMENT
+// ============================================
+
+// Create notification
+app.post('/api/notifications', async (req, res) => {
+    try {
+        const notification = new Notification(req.body);
+        await notification.save();
+        res.status(201).json(notification);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Handle preflight requests
+app.options('*', cors());
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
