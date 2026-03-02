@@ -1,0 +1,31 @@
+# Backend Dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY backend/package*.json ./
+
+# Install production dependencies
+RUN npm ci --only=production
+
+# Copy backend files
+COPY backend/server.js ./
+COPY backend/models ./models
+COPY backend/middleware ./middleware
+COPY backend/scripts ./scripts
+
+# Create .env file with defaults
+ENV MONGO_URI=mongodb://localhost:27017/DeliverX
+ENV PORT=5000
+ENV NODE_ENV=production
+
+# Expose port
+EXPOSE 5000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+
+# Start the server
+CMD ["node", "server.js"]
