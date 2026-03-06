@@ -1,10 +1,31 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const Shipment = require('../models/Shipment');
 const Driver = require('../models/Driver');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/deliverx';
+
+// Test users to be created (passwords will be hashed)
+const usersData = [
+    { name: 'Alex Rivera', email: 'admin@deliverx.com', password: 'admin123', role: 'admin', department: 'Operations HQ', status: 'active' },
+    { name: 'Morgan Chen', email: 'manager@deliverx.com', password: 'manager123', role: 'manager', department: 'Regional East', status: 'active' },
+    { name: 'Jordan Smith', email: 'clerk@deliverx.com', password: 'clerk123', role: 'clerk', department: 'Intake & Processing', status: 'active' },
+    { name: 'Taylor Quinn', email: 'driver@deliverx.com', password: 'driver123', role: 'driver', department: 'Route 7 – North', status: 'active' },
+    { name: 'Casey Park', email: 'delivery@deliverx.com', password: 'delivery123', role: 'delivery', department: 'Last Mile – Zone 3', status: 'active' },
+];
+
+// Hash passwords
+const hashPasswords = async (usersData) => {
+    return Promise.all(
+        usersData.map(async (user) => ({
+            ...user,
+            password: await bcrypt.hash(user.password, 12),
+        }))
+    );
+};
 
 // Sample data matching the original mock data
 const shipments = [
@@ -39,12 +60,17 @@ async function seed() {
         console.log('Connected to MongoDB');
 
         // Clear existing data
+        await User.deleteMany({});
         await Shipment.deleteMany({});
         await Driver.deleteMany({});
         await Notification.deleteMany({});
         console.log('Cleared existing data');
 
-        // Insert new data
+        // Hash passwords and insert users
+        const hashedUsers = await hashPasswords(usersData);
+        await User.insertMany(hashedUsers);
+        
+        // Insert other data
         await Shipment.insertMany(shipments);
         await Driver.insertMany(drivers);
         await Notification.insertMany(notifications);
