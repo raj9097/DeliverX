@@ -11,7 +11,7 @@ A full-featured MERN stack shipment management system with React frontend and No
 
 ### Development Setup
 
-1. **Install dependencies:**
+1. **Clone and install dependencies:**
 ```
 bash
 # Install frontend dependencies
@@ -31,14 +31,23 @@ docker run -d -p 27017:27017 --name mongodb mongo:7.0
 mongod
 ```
 
-3. **Seed the database:**
+3. **Configure environment:**
+Create `backend/.env` file:
 ```
-bash
+env
+MONGO_URI=mongodb://localhost:27017/DeliverX
+PORT=5000
+NODE_ENV=development
+JWT_SECRET=your-secret-key
+```
+
+4. **Seed the database:**
+```bash
 cd backend
 npm run seed
 ```
 
-4. **Start the servers:**
+5. **Start the servers:**
 ```
 bash
 # Terminal 1 - Backend (port 5000)
@@ -48,7 +57,7 @@ cd backend && npm run dev
 npm run dev
 ```
 
-5. **Open browser:**
+6. **Open browser:**
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:5000/api
 
@@ -107,13 +116,43 @@ docker run -p 5000:5000 -e MONGO_URI=mongodb://host.docker.internal:27017/Delive
 
 ```
 deliverx/
-├── backend/
-│   ├── models/          # MongoDB models (Shipment, Driver, User, Notification)
-│   ├── middleware/      # Auth, error handling
-│   ├── scripts/         # Database seeding
-│   ├── server.js        # Express server with all API routes
-│   └── package.json
-├── src/
+├── backend/                    # Node.js/Express API
+│   ├── config/
+│   │   ├── constants.js        # App constants
+│   │   └── database.js         # MongoDB connection
+│   ├── controllers/
+│   │   ├── authController.js   # Authentication logic
+│   │   ├── driverController.js # Driver management
+│   │   ├── notificationController.js
+│   │   ├── shipmentController.js
+│   │   ├── statController.js   # Statistics/analytics
+│   │   └── userController.js   # User management
+│   ├── middleware/
+│   │   ├── auth.js             # JWT authentication
+│   │   ├── catchAsync.js       # Error handling
+│   │   └── errorHandler.js
+│   ├── models/
+│   │   ├── Driver.js
+│   │   ├── Notification.js
+│   │   ├── Shipment.js
+│   │   ├── Stat.js
+│   │   └── User.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── driverRoutes.js
+│   │   ├── notificationRoutes.js
+│   │   ├── shipmentRoutes.js
+│   │   ├── statRoutes.js
+│   │   └── userRoutes.js
+│   ├── scripts/
+│   │   └── seed.js             # Database seeding
+│   ├── utils/
+│   │   ├── apiResponse.js
+│   │   └── logger.js
+│   ├── package.json
+│   └── server.js               # Express server entry
+│
+├── src/                        # React Frontend
 │   ├── components/
 │   │   └── common/
 │   │       ├── AppShell.jsx
@@ -122,43 +161,38 @@ deliverx/
 │   │       ├── ShipmentsTable.jsx
 │   │       └── StatsCard.jsx
 │   ├── context/
-│   │   └── AuthContext.jsx
+│   │   └── AuthContext.jsx    # Authentication context
 │   ├── pages/
-│   │   ├── auth/Login.jsx
+│   │   ├── auth/
+│   │   │   └── Login.jsx
 │   │   ├── admin/
 │   │   │   ├── AdminDashboard.jsx
 │   │   │   ├── UsersManagement.jsx
 │   │   │   ├── Fleet.jsx
 │   │   │   └── Analytics.jsx
 │   │   ├── manager/
+│   │   │   └── ManagerDashboard.jsx
 │   │   ├── clerk/
+│   │   │   └── ClerkDashboard.jsx
 │   │   ├── driver/
+│   │   │   └── DriverDashboard.jsx
 │   │   └── delivery/
-│   └── utils/
-├── docker-compose.yml
-├── Dockerfile.frontend
-├── Dockerfile.backend
-├── nginx.conf
-└── package.json
-```
-
-## 🔧 Environment Variables
-
-Create `backend/.env` file:
-
-```
-env
-# MongoDB Connection
-MONGO_URI=mongodb://localhost:27017/DeliverX
-# For MongoDB Atlas:
-# MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/DeliverX
-
-# Server
-PORT=5000
-NODE_ENV=development
-
-# JWT (for production)
-JWT_SECRET=your-secret-key
+│   │       └── DeliveryDashboard.jsx
+│   ├── utils/
+│   │   └── mockData.js
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.js
+│
+├── public/
+├── docker-compose.yml          # Docker orchestration
+├── Dockerfile                  # Legacy Dockerfile
+├── Dockerfile.frontend         # Frontend container
+├── Dockerfile.backend          # Backend container
+├── nginx.conf                  # Nginx configuration
+├── package.json                # Frontend dependencies
+├── vite.config.js              # Vite configuration
+└── tailwind.config.js          # Tailwind CSS config
 ```
 
 ## ✨ Features by Role
@@ -208,36 +242,13 @@ JWT_SECRET=your-secret-key
 - bcryptjs (password hashing)
 - JWT (authentication)
 
-## 📝 API Endpoints
+## 📄 API Documentation
 
-### Shipments
-- `GET /api/shipments` - List all shipments
-- `POST /api/shipments` - Create shipment
-- `PUT /api/shipments/:id` - Update shipment
-- `DELETE /api/shipments/:id` - Delete shipment
+See [BACKEND_README.md](BACKEND_README.md) for detailed API endpoints and JSON examples.
 
-### Users
-- `GET /api/users` - List all users
-- `POST /api/users` - Create user
-- `PUT /api/users/:id` - Update user
-- `DELETE /api/users/:id` - Delete user
-- `POST /api/auth/login` - User login
+## 🖥 Frontend Documentation
 
-### Drivers
-- `GET /api/drivers` - List all drivers
-- `POST /api/drivers` - Create driver
-- `PUT /api/drivers/:id` - Update driver
-- `DELETE /api/drivers/:id` - Delete driver
-
-### Stats
-- `GET /api/stats/monthly` - Monthly shipment stats
-- `GET /api/stats/revenue` - Revenue data
-- `GET /api/stats/status-distribution` - Status pie chart data
-- `GET /api/stats/summary` - Summary metrics
-
-### Other
-- `GET /api/notifications` - List notifications
-- `GET /api/health` - Health check
+See [FRONTEND_README.md](FRONTEND_README.md) for frontend setup and file structure.
 
 ## 🚢 Production Deployment
 
@@ -258,6 +269,6 @@ NODE_ENV=production
 JWT_SECRET=complex-random-string
 ```
 
-## 📄 License
+## 📝 License
 
 MIT License
