@@ -1,77 +1,111 @@
 const Shipment = require('../models/Shipment');
+const catchAsync = require('../middleware/catchAsync');
+const { apiSuccess, apiError } = require('../utils/apiResponse');
 
-exports.getAllShipments = async (req, res) => {
-    try {
-        const shipments = await Shipment.find().sort({ created: -1 });
-        res.json(shipments);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+// Create new shipment
+exports.createShipment = catchAsync(async (req, res) => {
+  const shipment = await Shipment.create(req.body);
+  return apiSuccess(res, shipment, 'Shipment created successfully', 201);
+});
 
-exports.createShipment = async (req, res) => {
-    try {
-        // Get the last shipment to generate sequential IDs
-        const lastShipment = await Shipment.findOne().sort({ id: -1 });
-        let newId = 'SHP-001';
-        let newTracking = 'DX-0000-AA';
+// Get all shipments
+exports.getAllShipments = catchAsync(async (req, res) => {
+  const { status, page = 1, limit = 50 } = req.query;
+  
+  const query = {};
+  if (status) {
+    query.status = status;
+  }
+  
+  const shipments = await Shipment.find(query)
+    .sort({ createdAt: -1 })
+    .limit(limit * 1)
+    .skip((page - 1) * limit);
+    
+  const count = await Shipment.countDocuments(query);
+  
+  return apiSuccess(res, {
+    shipments,
+    totalPages: Math.ceil(count / limit),
+    currentPage: page,
+    total: count
+  });
+});
 
-        if (lastShipment) {
-            // Generate sequential ID (SHP-001, SHP-002, etc.)
-            const lastNum = parseInt(lastShipment.id.replace('SHP-', ''));
-            newId = `SHP-${String(lastNum + 1).padStart(3, '0')}`;
+// Get single shipment
+exports.getShipment = catchAsync(async (req, res) => {
+  const shipment = await Shipment.findById(req.params.id);
+  if (!shipment) {
+    return apiError(res, 'Shipment not found', 404);
+  }
+  return apiSuccess(res, shipment);
+});
 
-            // Generate random tracking number (DX-XXXX-XX)
-            const randomNum = Math.floor(1000 + Math.random() * 9000);
-            const randomLetters = String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
-                String.fromCharCode(65 + Math.floor(Math.random() * 26));
-            newTracking = `DX-${randomNum}-${randomLetters}`;
-        }
+// Update shipment
+exports.updateShipment = catchAsync(async (req, res) => {
+  const shipment = await Shipment.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    { new: true, runValidators: true }
+  );
+  if (!shipment) {
+    return apiError(res, 'Shipment not found', 404);
+  }
+  return apiSuccess(res, shipment, 'Shipment updated successfully');
+});
 
-        const shipmentData = {
-            ...req.body,
-            id: req.body.id || newId,
-            tracking: req.body.tracking || newTracking,
-            status: req.body.status || 'pending',
-            priority: req.body.priority || 'medium',
-            driver: req.body.driver || 'Unassigned',
-            created: req.body.created || new Date().toISOString().split('T')[0]
-        };
+// Delete shipment
+exports.deleteShipment = catchAsync(async (req, res) => {
+  const shipment = await Shipment.findByIdAndDelete(req.params.id);
+  if (!shipment) {
+    return apiError(res, 'Shipment not found', 404);
+  }
+  return apiSuccess(res, null, 'Shipment deleted successfully');
+});
 
-        const shipment = new Shipment(shipmentData);
-        await shipment.save();
-        res.status(201).json(shipment);
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-};
+// Get clerk statistics
+exports.getClerkStats = catchAsync(async (req, res) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
 
-exports.updateShipment = async (req, res) => {
-    try {
-        const shipment = await Shipment.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
-        );
-        if (shipment) {
-            res.json(shipment);
-        } else {
-            res.status(404).json({ error: 'Shipment not found' });
-        }
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-};
+  const registeredToday = await Shipment.countDocuments({
+    createdAt: { $gte: today }
+  });
 
-exports.deleteShipment = async (req, res) => {
-    try {
-        const shipment = await Shipment.findByIdAndDelete(req.params.id);
-        if (shipment) {
-            res.json({ message: 'Shipment deleted successfully' });
-        } else {
-            res.status(404).json({ error: 'Shipment not found' });
-        }
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+  const inQueue = await Shipment.countDocuments({
+    status: 'pending'
+  });
+
+  const processed = await Shipment.countDocuments({
+    status: { $in: ['in-transit', 'out-for-delivery'] },
+    createdAt: { $gte: weekAgo }
+  });
+
+  const dispatched = await Shipment.countDocuments({
+    status: { $in: ['delivered'] },
+    createdAt: { $gte: weekAgo }
+  });
+
+  return apiSuccess(res, {
+    registeredToday,
+    inQueue,
+    processed,
+    dispatched
+  });
+});
+
+// Get shipment by tracking ID (public)
+exports.trackShipment = catchAsync(async (req, res) => {
+  const shipment = await Shipment.findOne({ 
+    tracking: req.params.trackingId 
+  });
+  
+  if (!shipment) {
+    return apiError(res, 'Shipment not found', 404);
+  }
+  
+  return apiSuccess(res, shipment);
+});
