@@ -112,9 +112,6 @@ body {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
-.input-field::placeholder {
-  color: var(--text-muted);
-}
 
 .table-header {
   background: var(--bg-secondary);

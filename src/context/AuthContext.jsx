@@ -27,16 +27,11 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Try to load user from localStorage on mount
+  // Clear session on app load - force login each time
   useEffect(() => {
-    const savedUser = localStorage.getItem('deliverx_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        localStorage.removeItem('deliverx_user');
-      }
-    }
+    // Remove stored credentials to require fresh login each time
+    localStorage.removeItem('deliverx_token');
+    localStorage.removeItem('deliverx_user');
     setLoading(false);
   }, []);
 

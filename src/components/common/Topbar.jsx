@@ -40,7 +40,6 @@ export default function Topbar({ pageTitle }) {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
           <input
             className="input-field pl-9 py-2 text-sm"
-            placeholder="Search tracking ID..."
             value={trackingId}
             onChange={(e) => setTrackingId(e.target.value)}
             style={{ width: 220, height: 36 }}

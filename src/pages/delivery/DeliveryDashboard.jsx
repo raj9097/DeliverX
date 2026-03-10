@@ -90,7 +90,7 @@ export default function DeliveryDashboard() {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Recipient Name</label>
-                <input type="text" placeholder="Name of person who received" className="input-field" />
+                <input type="text" className="input-field" />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Signature</label>
@@ -111,7 +111,7 @@ export default function DeliveryDashboard() {
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Notes</label>
-                <textarea className="input-field" rows={2} placeholder="Left at door, handed to neighbour, etc." />
+                <textarea className="input-field" rows={2} />
               </div>
             </div>
 

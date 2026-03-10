@@ -158,7 +158,7 @@ export default function UsersManagement() {
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-              <input className="input-field pl-9 py-2 text-sm" placeholder="Search users…"
+              <input className="input-field pl-9 py-2 text-sm"
                 value={search} onChange={e => setSearch(e.target.value)} style={{ width: 220, height: 36 }} />
             </div>
             <select className="input-field py-2 text-sm" value={roleFilter}
@@ -265,7 +265,6 @@ export default function UsersManagement() {
                     name="name"
                     value={formData.name} 
                     onChange={handleInputChange}
-                    placeholder="John Doe" 
                     className="input-field"
                     required 
                   />
@@ -279,7 +278,6 @@ export default function UsersManagement() {
                     name="email"
                     value={formData.email} 
                     onChange={handleInputChange}
-                    placeholder="john@deliverx.com" 
                     className="input-field"
                     required 
                   />
@@ -293,7 +291,6 @@ export default function UsersManagement() {
                     name="department"
                     value={formData.department} 
                     onChange={handleInputChange}
-                    placeholder="Operations" 
                     className="input-field"
                   />
                 </div>
@@ -339,7 +336,6 @@ export default function UsersManagement() {
                     name="password"
                     value={formData.password} 
                     onChange={handleInputChange}
-                    placeholder={editingUser ? "••••••••" : "Min 6 characters"} 
                     className="input-field"
                     required={!editingUser}
                     minLength={6}

@@ -165,7 +165,6 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
             <input
               className="input-field pl-8 py-2 text-sm"
-              placeholder="Search tracking, customer…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{ width: 220, height: 36 }}
@@ -267,7 +266,6 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
                     name="customer"
                     value={formData.customer}
                     onChange={handleInputChange}
-                    placeholder="Acme Corp" 
                     className="input-field" 
                     required
                   />
@@ -279,7 +277,6 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
                     name="origin"
                     value={formData.origin}
                     onChange={handleInputChange}
-                    placeholder="New York, NY" 
                     className="input-field" 
                     required
                   />
@@ -291,7 +288,6 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
                     name="destination"
                     value={formData.destination}
                     onChange={handleInputChange}
-                    placeholder="Los Angeles, CA" 
                     className="input-field" 
                     required
                   />
@@ -304,7 +300,6 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
                       name="weight"
                       value={formData.weight}
                       onChange={handleInputChange}
-                      placeholder="5.0" 
                       step="0.1"
                       className="input-field" 
                     />

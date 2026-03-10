@@ -34,21 +34,38 @@ export default function ClerkDashboard() {
         <div className="card max-w-2xl animate-fade-in" style={{ padding: 28 }}>
           <h2 className="font-heading text-xl font-bold mb-5">Register New Shipment</h2>
           <div className="grid grid-cols-2 gap-4">
-            {[
-              ['Sender Name', 'text', 'Full name'],
-              ['Sender Phone', 'tel', '+1 555-0000'],
-              ['Recipient Name', 'text', 'Full name'],
-              ['Recipient Phone', 'tel', '+1 555-0001'],
-              ['Origin Address', 'text', 'Street, City, State'],
-              ['Destination Address', 'text', 'Street, City, State'],
-              ['Package Weight (kg)', 'number', '0.0'],
-              ['Package Dimensions', 'text', 'L×W×H cm'],
-            ].map(([l, t, p]) => (
-              <div key={l}>
-                <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>{l}</label>
-                <input type={t} placeholder={p} className="input-field" />
-              </div>
-            ))}
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Sender Name</label>
+              <input type="text" className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Sender Phone</label>
+              <input type="tel" className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Recipient Name</label>
+              <input type="text" className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Recipient Phone</label>
+              <input type="tel" className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Origin Address</label>
+              <input type="text" className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Destination Address</label>
+              <input type="text" className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Package Weight (kg)</label>
+              <input type="number" className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Package Dimensions</label>
+              <input type="text" className="input-field" />
+            </div>
             <div>
               <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Priority</label>
               <select className="input-field">
@@ -66,9 +83,9 @@ export default function ClerkDashboard() {
               </select>
             </div>
           </div>
-          <div className="mt-2 col-span-2">
+          <div className="mt-4">
             <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Notes</label>
-            <textarea className="input-field" rows={2} placeholder="Special handling instructions…" />
+            <textarea className="input-field" rows={2} />
           </div>
           <button className="btn-primary mt-5 w-full">Generate Tracking & Register</button>
         </div>
@@ -89,3 +106,4 @@ export default function ClerkDashboard() {
     </div>
   );
 }
+

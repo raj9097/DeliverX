@@ -69,8 +69,7 @@ export default function Login() {
             <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-2 block">Track your shipment</label>
             <div className="flex gap-2 p-1.5 rounded-xl border border-zinc-700 bg-zinc-900/50 backdrop-blur-sm">
               <input
-                className="flex-1 bg-transparent border-none text-sm text-white px-3 focus:outline-none placeholder-zinc-600"
-                placeholder="Enter tracking ID (e.g. DX-7842-KL)"
+                className="flex-1 bg-transparent border-none text-sm text-white px-3 focus:outline-none"
                 value={trackingId}
                 onChange={e => setTrackingId(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleTrack()}
@@ -117,20 +116,28 @@ export default function Login() {
             <div>
               <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Email Address</label>
               <div className="relative">
-                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+                
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  className="input-field pl-9" placeholder="you@deliverx.com" required />
+                  className="input-field pl-9" required />
+                <span className="absolute left-9 top-1/2 -translate-y-1/2 text-sm pointer-events-none" 
+                  style={{ color: 'var(--text-muted)', zIndex: 5 }}>
+                  
+                </span>
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Password</label>
               <div className="relative">
-                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+                
                 <input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-                  className="input-field pl-9 pr-10" placeholder="Your password" required />
+                  className="input-field pl-9 pr-10" required />
+                <span className="absolute left-9 top-1/2 -translate-y-1/2 text-sm pointer-events-none" 
+                  style={{ color: 'var(--text-muted)', zIndex: 5 }}>
+                  
+                </span>
                 <button type="button" onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-30" style={{ color: 'var(--text-muted)' }}>
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
