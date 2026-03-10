@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, Eye, Edit2, Trash2, Package, X } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Edit2, Trash2, Package, X, Truck, User, MapPin, Calendar, Clock, Phone } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -37,20 +37,28 @@ const PriorityBadge = ({ priority }) => {
 
 export default function ShipmentsTable({ canCreate = false, canEdit = false, canDelete = false, filterByDriver = null, onShipmentsUpdate }) {
   const [shipments, setShipments] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedShipment, setSelectedShipment] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Form state
+  // Form state for create
   const [formData, setFormData] = useState({
     customer: '',
     origin: '',
     destination: '',
     weight: '',
     eta: '',
-    priority: 'medium'
+    priority: 'medium',
+    driver: '',
+    status: 'pending',
+    phone: '',
+    notes: ''
   });
 
   // Fetch shipments from API
@@ -68,8 +76,20 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
     }
   };
 
+  // Fetch drivers from API
+  const fetchDrivers = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/drivers`);
+      const data = await res.json();
+      setDrivers(data);
+    } catch (err) {
+      console.error('Failed to fetch drivers:', err);
+    }
+  };
+
   useEffect(() => {
     fetchShipments();
+    fetchDrivers();
   }, []);
 
   // Filter data
@@ -88,8 +108,8 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle form submission
-  const handleSubmit = async (e) => {
+  // Handle create form submission
+  const handleCreate = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -120,15 +140,77 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
         destination: '',
         weight: '',
         eta: '',
-        priority: 'medium'
+        priority: 'medium',
+        driver: '',
+        status: 'pending',
+        phone: '',
+        notes: ''
       });
-      setShowModal(false);
+      setShowCreateModal(false);
     } catch (err) {
       console.error('Failed to create shipment:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle edit form submission
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`${API_BASE}/shipments/${selectedShipment._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update shipment');
+      }
+
+      // Refresh the list
+      await fetchShipments();
+      
+      // Close modal
+      setShowEditModal(false);
+      setSelectedShipment(null);
+    } catch (err) {
+      console.error('Failed to update shipment:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle view
+  const handleView = (shipment) => {
+    setSelectedShipment(shipment);
+    setShowViewModal(true);
+  };
+
+  // Handle edit click
+  const handleEditClick = (shipment) => {
+    setSelectedShipment(shipment);
+    setFormData({
+      customer: shipment.customer || '',
+      origin: shipment.origin || '',
+      destination: shipment.destination || '',
+      weight: shipment.weight || '',
+      eta: shipment.eta ? shipment.eta.split('T')[0] : '',
+      priority: shipment.priority || 'medium',
+      driver: shipment.driver === 'Unassigned' ? '' : (shipment.driver || ''),
+      status: shipment.status || 'pending',
+      phone: shipment.phone || '',
+      notes: shipment.notes || ''
+    });
+    setShowEditModal(true);
   };
 
   // Handle delete
@@ -185,7 +267,7 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
           </select>
         </div>
         {canCreate && (
-          <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+          <button onClick={() => setShowCreateModal(true)} className="btn-primary flex items-center gap-2">
             <Plus size={16} /> New Shipment
           </button>
         )}
@@ -222,12 +304,12 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
                 <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
                 <td className="px-4 py-3"><PriorityBadge priority={s.priority} /></td>
                 <td className="px-4 py-3 font-mono text-xs">{s.weight}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: s.driver === 'Unassigned' ? '#71717a' : 'inherit' }}>{s.driver}</td>
-                <td className="px-4 py-3 font-mono text-xs">{s.eta}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: s.driver === 'Unassigned' ? '#71717a' : 'inherit' }}>{s.driver || 'Unassigned'}</td>
+                <td className="px-4 py-3 font-mono text-xs">{s.eta ? s.eta.split('T')[0] : '-'}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
-                    <button className="p-1.5 rounded-lg transition-colors hover:bg-zinc-700" title="View"><Eye size={13} /></button>
-                    {canEdit && <button className="p-1.5 rounded-lg transition-colors hover:bg-zinc-700" title="Edit"><Edit2 size={13} /></button>}
+                    <button onClick={() => handleView(s)} className="p-1.5 rounded-lg transition-colors hover:bg-zinc-700" title="View"><Eye size={13} /></button>
+                    {canEdit && <button onClick={() => handleEditClick(s)} className="p-1.5 rounded-lg transition-colors hover:bg-zinc-700" title="Edit"><Edit2 size={13} /></button>}
                     {canDelete && <button onClick={() => handleDelete(s._id)} className="p-1.5 rounded-lg transition-colors hover:text-red-400" title="Delete"><Trash2 size={13} /></button>}
                   </div>
                 </td>
@@ -247,28 +329,40 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
         </div>
       </div>
 
-      {/* New Shipment Modal */}
-      {showModal && (
+      {/* Create Shipment Modal */}
+      {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
-          <div className="card w-full max-w-lg animate-fade-in" style={{ padding: 28 }}>
+          <div className="card w-full max-w-lg animate-fade-in" style={{ padding: 28, maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-heading text-xl font-bold">Register New Shipment</h2>
-              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-zinc-700 rounded">
+              <button onClick={() => setShowCreateModal(false)} className="p-1 hover:bg-zinc-700 rounded">
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleCreate}>
               <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Customer Name *</label>
-                  <input 
-                    type="text" 
-                    name="customer"
-                    value={formData.customer}
-                    onChange={handleInputChange}
-                    className="input-field" 
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Customer Name *</label>
+                    <input 
+                      type="text" 
+                      name="customer"
+                      value={formData.customer}
+                      onChange={handleInputChange}
+                      className="input-field" 
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Phone</label>
+                    <input 
+                      type="tel" 
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="input-field" 
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Origin Address *</label>
@@ -315,18 +409,59 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Priority</label>
+                    <select 
+                      name="priority"
+                      value={formData.priority}
+                      onChange={handleInputChange}
+                      className="input-field"
+                    >
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Status</label>
+                    <select 
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="input-field"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="transit">In Transit</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="failed">Failed</option>
+                    </select>
+                  </div>
+                </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Priority</label>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Assign Driver</label>
                   <select 
-                    name="priority"
-                    value={formData.priority}
+                    name="driver"
+                    value={formData.driver}
                     onChange={handleInputChange}
                     className="input-field"
                   >
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
+                    <option value="">Unassigned</option>
+                    {drivers.map(d => (
+                      <option key={d._id} value={d.name}>{d.name}</option>
+                    ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Notes</label>
+                  <textarea 
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleInputChange}
+                    className="input-field" 
+                    rows={2}
+                  />
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
@@ -340,7 +475,282 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
                 <button 
                   type="button" 
                   className="btn-ghost flex-1" 
-                  onClick={() => setShowModal(false)}
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Shipment Modal */}
+      {showViewModal && selectedShipment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="card w-full max-w-lg animate-fade-in" style={{ padding: 28 }}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="font-heading text-xl font-bold">Shipment Details</h2>
+                <p className="text-sm font-mono mt-1" style={{ color: 'var(--accent)' }}>{selectedShipment.tracking}</p>
+              </div>
+              <button onClick={() => setShowViewModal(false)} className="p-1 hover:bg-zinc-700 rounded">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Status & Priority */}
+              <div className="flex gap-3">
+                <div className="flex-1 p-3 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Status</p>
+                  <StatusBadge status={selectedShipment.status} />
+                </div>
+                <div className="flex-1 p-3 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Priority</p>
+                  <PriorityBadge priority={selectedShipment.priority} />
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <User size={14} style={{ color: 'var(--accent)' }} />
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>CUSTOMER</span>
+                </div>
+                <p className="font-medium">{selectedShipment.customer}</p>
+                {selectedShipment.phone && (
+                  <p className="text-sm flex items-center gap-1 mt-1" style={{ color: 'var(--text-secondary)' }}>
+                    <Phone size={12} /> {selectedShipment.phone}
+                  </p>
+                )}
+              </div>
+
+              {/* Route */}
+              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <MapPin size={14} style={{ color: 'var(--accent)' }} />
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>ROUTE</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 mt-1.5 rounded-full bg-zinc-500"></div>
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Origin</p>
+                      <p>{selectedShipment.origin}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 mt-1.5 rounded-full" style={{ background: 'var(--accent)' }}></div>
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Destination</p>
+                      <p>{selectedShipment.destination}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Driver & Timeline */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Truck size={14} style={{ color: 'var(--accent)' }} />
+                    <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>DRIVER</span>
+                  </div>
+                  <p>{selectedShipment.driver || 'Unassigned'}</p>
+                </div>
+                <div className="p-4 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar size={14} style={{ color: 'var(--accent)' }} />
+                    <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>ETA</span>
+                  </div>
+                  <p>{selectedShipment.eta ? selectedShipment.eta.split('T')[0] : 'Not set'}</p>
+                </div>
+              </div>
+
+              {/* Package Info */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Weight</p>
+                  <p className="font-mono">{selectedShipment.weight || '-'} kg</p>
+                </div>
+                <div className="p-3 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Created</p>
+                  <p className="font-mono text-xs">{selectedShipment.createdAt ? new Date(selectedShipment.createdAt).toLocaleDateString() : '-'}</p>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedShipment.notes && (
+                <div className="p-3 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Notes</p>
+                  <p className="text-sm">{selectedShipment.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setShowViewModal(false)} className="btn-ghost flex-1">Close</button>
+              {canEdit && (
+                <button onClick={() => { setShowViewModal(false); handleEditClick(selectedShipment); }} className="btn-primary flex-1">
+                  Edit Shipment
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Shipment Modal */}
+      {showEditModal && selectedShipment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="card w-full max-w-lg animate-fade-in" style={{ padding: 28, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="font-heading text-xl font-bold">Edit Shipment</h2>
+                <p className="text-sm font-mono mt-1" style={{ color: 'var(--accent)' }}>{selectedShipment.tracking}</p>
+              </div>
+              <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-zinc-700 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleEdit}>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Customer Name *</label>
+                    <input 
+                      type="text" 
+                      name="customer"
+                      value={formData.customer}
+                      onChange={handleInputChange}
+                      className="input-field" 
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Phone</label>
+                    <input 
+                      type="tel" 
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="input-field" 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Origin Address *</label>
+                  <input 
+                    type="text" 
+                    name="origin"
+                    value={formData.origin}
+                    onChange={handleInputChange}
+                    className="input-field" 
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Destination Address *</label>
+                  <input 
+                    type="text" 
+                    name="destination"
+                    value={formData.destination}
+                    onChange={handleInputChange}
+                    className="input-field" 
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Weight (kg)</label>
+                    <input 
+                      type="number" 
+                      name="weight"
+                      value={formData.weight}
+                      onChange={handleInputChange}
+                      step="0.1"
+                      className="input-field" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>ETA</label>
+                    <input 
+                      type="date" 
+                      name="eta"
+                      value={formData.eta}
+                      onChange={handleInputChange}
+                      className="input-field" 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Priority</label>
+                    <select 
+                      name="priority"
+                      value={formData.priority}
+                      onChange={handleInputChange}
+                      className="input-field"
+                    >
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Status</label>
+                    <select 
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="input-field"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="transit">In Transit</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="failed">Failed</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Assign Driver</label>
+                  <select 
+                    name="driver"
+                    value={formData.driver}
+                    onChange={handleInputChange}
+                    className="input-field"
+                  >
+                    <option value="">Unassigned</option>
+                    {drivers.map(d => (
+                      <option key={d._id} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Notes</label>
+                  <textarea 
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleInputChange}
+                    className="input-field" 
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button 
+                  type="submit" 
+                  className="btn-primary flex-1" 
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-ghost flex-1" 
+                  onClick={() => setShowEditModal(false)}
                 >
                   Cancel
                 </button>
@@ -352,3 +762,4 @@ export default function ShipmentsTable({ canCreate = false, canEdit = false, can
     </div>
   );
 }
+
